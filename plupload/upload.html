@@ -40,7 +40,9 @@ $(function(){
         max_file_count: 20,
         
         // Part file size
-        chunk_size: '10mb',
+        chunk_size: '1mb',
+
+        max_retries: 3,
         
         filters: {
             // Maximum file size
@@ -87,49 +89,32 @@ $(function(){
                 }
             },
             UploadProgress: function(uploader,file){
-                $.ERROR(uploader,file);
+                //
             },
             QueueChanged: function(uploader,file){
-                //$("#queued").val(uploader.total.queued);
+                //
             },
             FileUploaded: function(uploader){
-                //$("#queued").val(uploader.total.queued);
+                //
+            },
+            ChunkUploaded: function(uploader,file,responseObject){
+                if(responseObject.status != 200){
+                    var errorMsg = "文件" + file['name'] + "在上传过程中遇到问题，请稍后重试";
+                    $('#uploader').plupload('notify', 'error', errorMsg);
+                    uploader.removeFile(file);
+                    return;
+                }
+                var rst = $.parseJSON(responseObject.response);
+                if(rst.Flag != 100){
+                    var errorMsg = "文件" + file['name'] + "上传失败，原因：" + rst.FlagString;
+                    $('#uploader').plupload('notify', 'error', errorMsg);
+                    uploader.removeFile(file);
+                    return;
+                }
             }
         }
     });
 });
-
-(function($){
-    $.extend({
-        GET: function(){
-            var aQuery = window.location.href.split("?");
-            var aGET = new Array();
-            if(aQuery.length > 1){
-                var aBuf = aQuery[1].split("&");
-                for(var i=0, iLoop = aBuf.length; i < iLoop; i++){
-                    var aTmp = aBuf[i].split("=");
-                    aGET[aTmp[0]] = aTmp[1];
-                }
-            }
-            return aGET;
-        },
-        ERROR: function(uploader,file){
-            $.ajax({
-                type:'GET',
-                url:'upload2.php',
-                data:{action:'error'},
-                dataType: 'text',
-                async:false,
-                success:function(message){
-                    if(message){
-                        $('#uploader').plupload('notify', 'error', message);
-                        uploader.removeFile(file);
-                    }
-                }
-            });
-        }
-    });
-})(jQuery);
 </script>
 <div><strong>注意</strong>：上传未完成请勿进行关闭或返回操作，否则会造成上传失败！</div>
 </body>

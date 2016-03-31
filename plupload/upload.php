@@ -11,17 +11,6 @@ $access_id = ''; //填入access_id
 $access_key = '';//填入access_key
 $upload_api = 'http://upload.dvr.aodianyun.com/v2'; //上传接口地址
 
-//ajax error
-if(isset($_GET['action']) && $_GET['action'] == 'error'){
-    $key = 'error';
-    $error = $_COOKIE[$key];
-    echo $error;
-    if($error){
-        cookie($key,'');
-    }
-    exit;
-}
-
 // 5 minutes execution time
 @set_time_limit(5 * 60);
 
@@ -54,8 +43,7 @@ elseif(isset($_GET["chunks"])){
 
 if(!empty($_FILES)){
     if($_FILES["file"]["error"] || !$_FILES["file"]["size"] || !is_uploaded_file($_FILES["file"]["tmp_name"])){
-        cookie('error','无法移动上传的文件。');
-        die('{"jsonrpc" : "2.0", "error" : {"code": 101, "message": "Failed to move uploaded file."}, "id" : "id"}');
+        die('{"Flag":101,"FlagString":"服务器异常，无法移动上传的文件。"}');
     }
 }
 
@@ -72,12 +60,10 @@ $res = curl($upload_api.'/DVR.UploadPart','parameter='.json_encode($param));
 if(!empty($res)){
     $res = json_decode($res,true);
     if($res['Flag'] != 100){
-        cookie('error',$res['FlagString']);
-        die('{"jsonrpc" : "2.0", "error" : {"code": 102, "message": "Part file upload api call failed."}, "id" : "id"}');
+        die('{"Flag":102,"FlagString":"'.$res['FlagString'].'"}');
     }
 }else{
-    cookie('error','Part文件上传接口或网络异常');
-    die('{"jsonrpc" : "2.0", "error" : {"code": 103, "message": "Part file upload api or network anomaly."}, "id" : "id"}');
+    die('{"Flag":102,"FlagString":"Part文件上传接口或网络异常"}');
 }
 
 // Check if file has been uploaded
@@ -91,24 +77,15 @@ if(!$chunks || $chunk == $chunks - 1){
     if(!empty($success)){
         $res = json_decode($success,true);
         if($res['Flag'] != 100){
-            cookie('error',$res['FlagString']);
-            die('{"jsonrpc" : "2.0", "error" : {"code": 104, "message": "Upload complete api call failed."}, "id" : "id"}');
+            die('{"Flag":102,"FlagString":"'.$res['FlagString'].'"}');
         }
     }else{
-        cookie('error','上传完成接口或网络异常');
-        die('{"jsonrpc" : "2.0", "error" : {"code": 105, "message": "Upload complete api or network anomaly."}, "id" : "id"}');
+        die('{"Flag":102,"FlagString":"上传完成接口或网络异常"}');
     }
 }
 
 // Return Success JSON-RPC response
-die('{"jsonrpc" : "2.0", "result" : null, "id" : "id"}');
-
-
-//cookie
-function cookie($key, $value='', $time=86400, $path='/'){
-    $_COOKIE[$key] = $value;
-    setcookie($key, $value, (time() + $time), $path);
-}
+die('{"Flag":100,"FlagString":"上传完成"}');
 
 //post upload file
 function curl($url,$data){
